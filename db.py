@@ -1,11 +1,13 @@
 import mysql.connector
 import json
+import getpass
 
 with open("config.json") as json_data_file:
     config = json.load(json_data_file)
 
 dbcon= config['mysql']
-conn = mysql.connector.connect(user=dbcon['user'], host=dbcon['host'], database=dbcon['database'])
+db_pass = getpass.getpass("SQL password")
+conn = mysql.connector.connect(user=dbcon['user'],  password=db_pass, host=dbcon['host'], database=dbcon['database'])
 cursor = conn.cursor()
 
 cursor.execute("DROP TABLE IF EXISTS one_min")
