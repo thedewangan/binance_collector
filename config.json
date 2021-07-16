@@ -1,0 +1,18 @@
+{
+    "mysql": {
+        "host": "127.0.0.1",
+        "user": "root",
+        "database": "binance"
+    },
+
+    "collector_period_seconds": 60,
+    "reporter_period_seconds": 1200,
+    "exchange_ratelimit": 1000,
+    "exchange_timeout": 5000,
+    "market_limit": 3,
+    
+    "port": 465,
+    "smtp_server": "smtp.gmail.com",
+    "sender_email": "prashant.apptest@gmail.com",
+    "receiver_emails": ["prashantdewangan95@gmail.com"]
+}
