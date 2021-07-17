@@ -8,11 +8,11 @@
     "collector_interval_seconds": 60,
     "exchange_ratelimit": 1000,
     "exchange_timeout": 5000,
-    "market_limit": 50,
+    "market_limit": 3,
 
-    "reporter_interval_seconds": 43200,
-    "reporting_time_divisor": 1800,
-    "reporting_delay": 300,
+    "reporter_interval_seconds": 300,
+    "reporting_time_divisor": 300,
+    "reporting_delay": 60,
     
     "port": 465,
     "smtp_server": "smtp.gmail.com",

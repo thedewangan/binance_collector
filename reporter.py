@@ -10,10 +10,10 @@ import json
 import sys
 import setproctitle
 
+config_file = "config.test.json" if(len(sys.argv)>3 and str(sys.argv[3]) == "test") else "config.json"
 
-with open("config.json") as json_data_file:
+with open(config_file) as json_data_file:
     config = json.load(json_data_file)
-
 
 INTERVAL_IN_SEC = config['reporter_interval_seconds']
 
