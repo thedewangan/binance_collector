@@ -19,7 +19,7 @@
     "port": 465,
     "smtp_server": "smtp.gmail.com",
     "sender_email": "prashant.apptest@gmail.com",
-    "receiver_emails": ["prashantdewangan95@gmail.com"]
+    "receiver_emails": ["edul@mudrex.com", "prashantdewangan95@gmail.com"]
 
     
 }

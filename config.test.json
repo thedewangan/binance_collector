@@ -6,9 +6,9 @@
     },
 
     "collector_interval_seconds": 60,
-    "exchange_ratelimit": 1000,
+    "exchange_ratelimit": 500,
     "exchange_timeout": 5000,
-    "market_limit": 50,
+    "market_limit": 20,
     "collector_log_file": "collection_log",
 
     "reporter_interval_seconds": 3600,
