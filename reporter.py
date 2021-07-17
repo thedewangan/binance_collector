@@ -7,12 +7,15 @@ from time import strftime
 import pytz
 import mysql.connector
 import json
+import sys
+import setproctitle
 
 
 with open("config.json") as json_data_file:
     config = json.load(json_data_file)
 
-INTERVAL_IN_SEC = config['reporter_period_seconds']
+
+INTERVAL_IN_SEC = config['reporter_interval_seconds']
 
 f = open("binance_collector_info", "r")
 
@@ -25,8 +28,11 @@ f.close()
 market_limit = min(config['market_limit'], market_total_count)
 port = config['port']
 
-password = getpass.getpass("Email password")
-db_pass = getpass.getpass("SQL password")
+# to change password getting mechanism
+db_pass = str(sys.argv[1])
+mail_pass = str(sys.argv[2])
+setproctitle.setproctitle("reporter.py")
+
 smtp_server = config['smtp_server']
 sender = config['sender_email']
 receivers = config['receiver_emails']
@@ -56,9 +62,12 @@ def get_count(period, params):
     end_time = params['end_time']
 
     start_time = end_time - INTERVAL_IN_SEC*1000
+    end_time -= 60*1000
+    # subtracting 1 min from end since SQL between is inclusive and we want exlusive
+
     end = datetime.utcfromtimestamp(end_time/1000)
     start = datetime.utcfromtimestamp(start_time/1000)
-    print("Period %s start %s end %s ", period, start, end)
+    print("Period: ", period, "\tStart: ", start, "\tEnd: ", end)
 
     cursor = params['conn'].cursor()
     table_name = get_table_name(period)
@@ -75,8 +84,9 @@ def get_count(period, params):
 #-------------------------------------------------------------------------------
 
 def send_report(conn):
-    # reporting for 5 minutes past as latest minute details will still be under process
-    min_in_millis = get_cur_min() - 300000      
+
+    min_in_millis = get_cur_min() 
+    min_in_millis = min_in_millis - (min_in_millis % (config['reporting_time_divisor']*1000))
 
     # uptime in millis
     uptime = min_in_millis - start_time
@@ -92,7 +102,6 @@ def send_report(conn):
         'end_time': min_in_millis
     }
     data = {
-        'TIME UTC': datetime.utcfromtimestamp(min_in_millis/1000).strftime("%m/%d/%Y, %H:%M:%S"),
         'Number of markets present in exchange': market_total_count,
         'Number of markets after limiting':  market_limit,
         'Number of data points expected in last one interval for 5 min': expected[5]*market_limit,
@@ -105,24 +114,32 @@ def send_report(conn):
         'Percentage of data points available for 1 hour': get_count(60, params)/(expected[60]*market_limit)*100,
     }
 
-    str = json.dumps(data, indent=2)
-    message = 'Subject: {}\n\n{}'.format("Binance Report", str)
+    body = json.dumps(data, indent=2)
+
+    report_time = datetime.utcfromtimestamp(min_in_millis/1000).strftime("%m/%d/%Y, %H:%M:%S"),
+    report_time = ''.join(report_time)
+    subject = "Binance Report UTC: " + report_time
+    message = 'Subject: {}\n\n{}'.format(subject, body)
 
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
         try:
             for receiver in receivers:
-                print("sending mail to %s ", receiver)
-                server.login(sender, password)
+                print("Time: ", report_time, "\tSending mail to: ", receiver)
+                server.login(sender, mail_pass)
                 server.sendmail(sender, receiver, message)
         except:
             return
 
 #-------------------------------------------------------------------------------
-
 ticker = threading.Event()
 
-while not ticker.wait(INTERVAL_IN_SEC):
+rem = get_cur_min() % (config['reporting_time_divisor']*1000)
+# setting an additional delay as some processing might be happening at current time
+WAIT_TIME= INTERVAL_IN_SEC - rem/1000 + config['reporting_delay']
+
+while not ticker.wait(WAIT_TIME):
+    WAIT_TIME = INTERVAL_IN_SEC
     dbcon= config['mysql']
     conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
     send_report(conn)

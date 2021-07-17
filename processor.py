@@ -25,7 +25,7 @@ def get_table_name(period):
 #-------------------------------------------------------------------------------
 
 def data_processor(period, cur_min, conn):
-    print("INSIDE DATA PROCESSOR %s ", period)
+    print("DATA PROCESSOR: ", period, " min\n")
     (in_table, out_table) = get_table_name(period)
     cursor = conn.cursor()
 

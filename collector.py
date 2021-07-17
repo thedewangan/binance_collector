@@ -1,3 +1,4 @@
+from reporter import WAIT_TIME
 import ccxt
 from datetime import datetime
 import math
@@ -11,11 +12,15 @@ from asyncio.tasks import sleep
 from processor import data_processor
 import json
 import getpass
+import sys
+import setproctitle
 
 with open("config.json") as json_data_file:
     config = json.load(json_data_file)
 
-db_pass = getpass.getpass("SQL password")
+# to change password getting mechanism
+db_pass = str(sys.argv[1])
+setproctitle.setproctitle("collector.py")
 
 exchange = ccxt.binance()
 exchange.enableRateLimit = True
@@ -27,7 +32,7 @@ dbcon= config['mysql']
 conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
 cursor = conn.cursor()
 
-INTERVAL_IN_SEC = config['collector_period_seconds']
+INTERVAL_IN_SEC = config['collector_interval_seconds']
 
 # returns latest minute since epoch in millis
 def get_cur_min():
@@ -74,7 +79,6 @@ async def collector(params):
     if(params['running'] == False):
             await exchange.load_markets()
             params['running'] = True
-            # RESTORE
             min_in_millis = get_cur_min()
             params['service_start_time'] = min_in_millis
             f = open("binance_collector_info","w+")
@@ -83,16 +87,12 @@ async def collector(params):
             # actual number of markets was greater than reuqest limit per second !?
             f.close()
         
-    # TESTING !!
-    # REMOVE 2 LINES LATER
-    # params['start'] += 60000
-    # min_in_millis = params['start']
-
     start = min_in_millis - 60000
     uptime_in_min = (min_in_millis - params['service_start_time'])/60000
 
     await minute_collect_all(start)
     minutes = min_in_millis/60000
+    # async support for databases ?
     if(minutes % 5 == 0 and uptime_in_min >= 5):
         data_processor(5, minutes, conn)
     if(minutes % 15 == 0 and uptime_in_min >= 15):
@@ -101,7 +101,7 @@ async def collector(params):
         data_processor(30, minutes, conn)
     if(minutes % 60 == 0 and uptime_in_min >= 60):
         data_processor(60, minutes, conn)
-
+    
 #-------------------------------------------------------------------------------
 
 def starter(params):
@@ -112,14 +112,9 @@ def starter(params):
 #-------------------------------------------------------------------------------
 
 ticker = threading.Event()
-# TESTING. REMOVE START AND SERVICE START TIME LATER
 params = {'running': False}  
-# params['start'] = get_cur_min() - 7200000       #2 hour behind
-# params['service_start_time'] = params['start']
 
-
-
-PERIOD = 0
-while not ticker.wait(PERIOD):
-    PERIOD = INTERVAL_IN_SEC
+WAIT_TIME = 0
+while not ticker.wait(WAIT_TIME):
+    WAIT_TIME = INTERVAL_IN_SEC
     starter(params)
