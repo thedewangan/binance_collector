@@ -5,12 +5,9 @@ from pprint import pprint
 import asyncio
 import ccxt.async_support as ccxt
 import pytz
-import threading, time
 import mysql.connector
-from asyncio.tasks import sleep
 from processor import data_processor
 import json
-import getpass
 import sys
 import logging
 import setproctitle
@@ -29,7 +26,6 @@ setproctitle.setproctitle("collector.py")
 exchange = ccxt.binance()
 exchange.enableRateLimit = True
 exchange.rateLimit = config['exchange_ratelimit']
-# what should be good timeout value ?
 exchange.timeout = config['exchange_timeout']
 
 dbcon= config['mysql']
@@ -61,9 +57,9 @@ async def minute_collect_market(symbol, start):
                 conn.commit()
             except:
                 conn.rollback()
-            # print(symbol, end = " ")
-            # pprint(ans)
-            # print()
+        # print(symbol, end = " ")
+        # pprint(ans)
+        # print()
     except:
         return
 
@@ -114,18 +110,16 @@ async def collector(params):
         data_processor(60, minutes, conn)
     
 #-------------------------------------------------------------------------------
+async def time_manager(params):
+    while True:
+        # note that if collector takes more time than interval wait would be more
+        # so ensure that collector does work before interval
+        await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), collector(params))
 
-def starter(params):
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(collector(params))
 
-    
 #-------------------------------------------------------------------------------
 
-ticker = threading.Event()
 params = {'running': False}  
+loop = asyncio.get_event_loop()
+loop.run_until_complete(time_manager(params))
 
-WAIT_TIME = 0
-while not ticker.wait(WAIT_TIME):
-    WAIT_TIME = INTERVAL_IN_SEC
-    starter(params)

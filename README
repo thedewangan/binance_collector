@@ -11,7 +11,8 @@ LIMITATIONS:
 
 -   Database queries are synchronous
 
--   First report will have less %age of data points even though all possible records where made
+-   In absence of intial delay of an hour, first report will have less %age of data points 
+    even though all possible records where made
     [Expected value is calculated for entire interval. 
     However, reporting service might not have started at same segment as collection period]
 

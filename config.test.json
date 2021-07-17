@@ -6,18 +6,19 @@
     },
 
     "collector_interval_seconds": 60,
-    "exchange_ratelimit": 500,
+    "exchange_ratelimit": 100,
     "exchange_timeout": 5000,
-    "market_limit": 20,
+    "market_limit": 100,
     "collector_log_file": "collection_log",
 
     "reporter_interval_seconds": 3600,
     "reporting_time_divisor": 3600,
     "reporting_delay": 300,
+    "initial_delay": 3600,
     "reporter_log_file": "report_log",
     
     "port": 465,
     "smtp_server": "smtp.gmail.com",
     "sender_email": "prashant.apptest@gmail.com",
-    "receiver_emails": ["prashantdewangan95@gmail.com"]
+    "receiver_emails": ["prashantdewangan95@gmail.com", "prashantdewangan.iith@gmail.com"]
 }

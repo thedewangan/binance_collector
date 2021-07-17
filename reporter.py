@@ -1,6 +1,4 @@
 import smtplib, ssl
-import getpass
-import threading
 import math
 from datetime import datetime
 from time import strftime
@@ -9,6 +7,7 @@ import mysql.connector
 import json
 import sys
 import logging
+import asyncio
 import setproctitle
 
 config_file = "config.test.json" if(len(sys.argv)>3 and str(sys.argv[3]) == "test") else "config.json"
@@ -88,7 +87,7 @@ def get_count(period, params):
 
 #-------------------------------------------------------------------------------
 
-def send_report(conn):
+async def send_report(conn):
 
     min_in_millis = get_cur_min() 
     min_in_millis = min_in_millis - (min_in_millis % (config['reporting_time_divisor']*1000))
@@ -143,16 +142,23 @@ def send_report(conn):
             return
 
 #-------------------------------------------------------------------------------
-ticker = threading.Event()
 
-rem = get_cur_min() % (config['reporting_time_divisor']*1000)
-# setting an additional delay as some processing might be happening at current time
-WAIT_TIME= INTERVAL_IN_SEC - rem/1000 + config['reporting_delay']
+async def time_manager(conn):
+    rem = get_cur_min() % (config['reporting_time_divisor']*1000)
+    # setting an additional delay as some processing might be happening at current time
+    wait_time = INTERVAL_IN_SEC - rem/1000 + config['reporting_delay'] + config['initial_delay']
+    await asyncio.sleep(wait_time)
+    while True:
+        cur_time = datetime.utcfromtimestamp(get_cur_min()/1000).strftime("%m/%d/%Y, %H:%M:%S"),
+        logging.info("Awaking reporter " + ''.join(cur_time))
+        await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), send_report(conn))
 
-while not ticker.wait(WAIT_TIME):
-    WAIT_TIME = INTERVAL_IN_SEC
-    logging.info("Awaking reporter")
-    dbcon= config['mysql']
-    conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
-    send_report(conn)
-    conn.close()
+#-------------------------------------------------------------------------------
+
+dbcon= config['mysql']
+conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(time_manager(conn))
+conn.close()
+
