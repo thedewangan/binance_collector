@@ -101,6 +101,11 @@ def send_report(conn):
         'conn': conn,
         'end_time': min_in_millis
     }
+    p1 = round(get_count(5, params)/(expected[5]*market_limit)*100, 2)
+    p2 = round(get_count(15, params)/(expected[15]*market_limit)*100, 2)
+    p3 = round(get_count(30, params)/(expected[30]*market_limit)*100, 2)
+    p4 = round(get_count(60, params)/(expected[60]*market_limit)*100, 2)
+
     data = {
         'Number of markets present in exchange': market_total_count,
         'Number of markets after limiting':  market_limit,
@@ -108,10 +113,10 @@ def send_report(conn):
         'Number of data points expected in last one interval for 15 min': expected[15]*market_limit,
         'Number of data points expected in last one interval for 30 min': expected[30]*market_limit,
         'Number of data points expected in last one interval for 1 hour': expected[60]*market_limit,
-        'Percentage of data points available for 5 min': get_count(5, params)/(expected[5]*market_limit)*100,
-        'Percentage of data points available for 15 min': get_count(15, params)/(expected[15]*market_limit)*100,
-        'Percentage of data points available for 30 min': get_count(30, params)/(expected[30]*market_limit)*100,
-        'Percentage of data points available for 1 hour': get_count(60, params)/(expected[60]*market_limit)*100,
+        'Percentage of data points available for 5 min': p1,
+        'Percentage of data points available for 15 min': p2,
+        'Percentage of data points available for 30 min': p3,
+        'Percentage of data points available for 1 hour': p4
     }
 
     body = json.dumps(data, indent=2)

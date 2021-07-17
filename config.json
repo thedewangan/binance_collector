@@ -8,7 +8,7 @@
     "collector_interval_seconds": 60,
     "exchange_ratelimit": 1000,
     "exchange_timeout": 5000,
-    "market_limit": 50,
+    "market_limit": 10,
 
     "reporter_interval_seconds": 43200,
     "reporting_time_divisor": 1800,
