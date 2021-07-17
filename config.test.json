@@ -8,12 +8,12 @@
     "collector_interval_seconds": 60,
     "exchange_ratelimit": 1000,
     "exchange_timeout": 5000,
-    "market_limit": 3,
+    "market_limit": 50,
     "collector_log_file": "collection_log",
 
-    "reporter_interval_seconds": 1800,
-    "reporting_time_divisor": 1800,
-    "reporting_delay": 60,
+    "reporter_interval_seconds": 3600,
+    "reporting_time_divisor": 3600,
+    "reporting_delay": 300,
     "reporter_log_file": "report_log",
     
     "port": 465,
