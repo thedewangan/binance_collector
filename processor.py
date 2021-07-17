@@ -43,6 +43,9 @@ def data_processor(period, cur_min, conn):
     process(result, d)
     query = "INSERT INTO " + out_table + " VALUES (%s, %s, %s, %s, %s, %s, %s)"
     for market, row in d.items():
+        # bug fix: do not take non border values as open time 
+        # happens in case of missing border values in input tables
+        row[0] = min(row[0], start)
         try:
             cursor.execute(query, tuple(row))
             conn.commit()
