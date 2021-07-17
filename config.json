@@ -9,13 +9,17 @@
     "exchange_ratelimit": 1000,
     "exchange_timeout": 5000,
     "market_limit": 10,
+    "collector_log_file": "collection_log",
 
     "reporter_interval_seconds": 43200,
     "reporting_time_divisor": 1800,
     "reporting_delay": 300,
+    "reporter_log_file": "report_log",
     
     "port": 465,
     "smtp_server": "smtp.gmail.com",
     "sender_email": "prashant.apptest@gmail.com",
     "receiver_emails": ["prashantdewangan95@gmail.com"]
+
+    
 }

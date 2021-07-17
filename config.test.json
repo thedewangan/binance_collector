@@ -9,10 +9,12 @@
     "exchange_ratelimit": 1000,
     "exchange_timeout": 5000,
     "market_limit": 3,
+    "collector_log_file": "collection_log",
 
     "reporter_interval_seconds": 1800,
     "reporting_time_divisor": 1800,
     "reporting_delay": 60,
+    "reporter_log_file": "report_log",
     
     "port": 465,
     "smtp_server": "smtp.gmail.com",

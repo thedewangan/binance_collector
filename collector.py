@@ -12,13 +12,16 @@ from processor import data_processor
 import json
 import getpass
 import sys
+import logging
 import setproctitle
+
 
 config_file = "config.test.json" if(len(sys.argv)>2 and str(sys.argv[2]) == "test") else "config.json"
 
 with open(config_file) as json_data_file:
     config = json.load(json_data_file)
 
+logging.basicConfig(filename=config['collector_log_file'],  level=logging.INFO)
 # to change password getting mechanism
 db_pass = str(sys.argv[1])
 setproctitle.setproctitle("collector.py")
@@ -50,7 +53,7 @@ async def minute_collect_market(symbol, start):
         if(len(ans) and len(ans[0])==6):
             t = ans[0][0]
             timestamp = datetime.utcfromtimestamp(float(t)/1000)
-            print(timestamp)
+            # print(timestamp)
             query = "INSERT INTO one_min VALUES (%s, %s, %s, %s, %s, %s, %s)"
             data = (timestamp, symbol, ans[0][1], ans[0][2], ans[0][3], ans[0][4], ans[0][5])
             try:
@@ -58,9 +61,9 @@ async def minute_collect_market(symbol, start):
                 conn.commit()
             except:
                 conn.rollback()
-            print(symbol, end = " ")
-            pprint(ans)
-            print()
+            # print(symbol, end = " ")
+            # pprint(ans)
+            # print()
     except:
         return
 
@@ -91,16 +94,23 @@ async def collector(params):
     start = min_in_millis - 60000
     uptime_in_min = (min_in_millis - params['service_start_time'])/60000
 
+    start_str = ''.join(datetime.utcfromtimestamp(min_in_millis/1000).strftime("%m/%d/%Y, %H:%M:%S"))
+    logging.info("Starting collection: " + start_str)
+
     await minute_collect_all(start)
     minutes = min_in_millis/60000
     # async support for databases ?
     if(minutes % 5 == 0 and uptime_in_min >= 5):
+        logging.info("Calling 5 min processor")
         data_processor(5, minutes, conn)
     if(minutes % 15 == 0 and uptime_in_min >= 15):
+        logging.info("Calling 15 min processor")
         data_processor(15, minutes, conn)
     if(minutes % 30 == 0 and uptime_in_min >= 30):
+        logging.info("Calling 30 min processor")
         data_processor(30, minutes, conn)
     if(minutes % 60 == 0 and uptime_in_min >= 60):
+        logging.info("Calling 60 min processor")
         data_processor(60, minutes, conn)
     
 #-------------------------------------------------------------------------------

@@ -8,6 +8,7 @@ import pytz
 import mysql.connector
 import json
 import sys
+import logging
 import setproctitle
 
 config_file = "config.test.json" if(len(sys.argv)>3 and str(sys.argv[3]) == "test") else "config.json"
@@ -15,6 +16,7 @@ config_file = "config.test.json" if(len(sys.argv)>3 and str(sys.argv[3]) == "tes
 with open(config_file) as json_data_file:
     config = json.load(json_data_file)
 
+logging.basicConfig(filename=config['reporter_log_file'],  level=logging.INFO)
 INTERVAL_IN_SEC = config['reporter_interval_seconds']
 
 f = open("binance_collector_info", "r")
@@ -67,7 +69,10 @@ def get_count(period, params):
 
     end = datetime.utcfromtimestamp(end_time/1000)
     start = datetime.utcfromtimestamp(start_time/1000)
-    print("Period: ", period, "\tStart: ", start, "\tEnd: ", end)
+    # print("Period: ", period, "\tStart: ", start, "\tEnd: ", end)
+    start_str = ''.join(start.strftime("%m/%d/%Y, %H:%M:%S"))
+    end_str = ''.join(end.strftime("%m/%d/%Y, %H:%M:%S"))
+    logging.info("Period: " + str(period) + "\tStart: " + start_str + "\tEnd: " + end_str)
 
     cursor = params['conn'].cursor()
     table_name = get_table_name(period)
@@ -130,7 +135,8 @@ def send_report(conn):
     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
         try:
             for receiver in receivers:
-                print("Time: ", report_time, "\tSending mail to: ", receiver)
+                # print("Time: ", report_time, "\tSending mail to: ", receiver)
+                logging.info("Time: " + report_time + "\tSending mail to: " + receiver)
                 server.login(sender, mail_pass)
                 server.sendmail(sender, receiver, message)
         except:
@@ -145,6 +151,7 @@ WAIT_TIME= INTERVAL_IN_SEC - rem/1000 + config['reporting_delay']
 
 while not ticker.wait(WAIT_TIME):
     WAIT_TIME = INTERVAL_IN_SEC
+    logging.info("Awaking reporter")
     dbcon= config['mysql']
     conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
     send_report(conn)
