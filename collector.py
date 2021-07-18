@@ -90,7 +90,7 @@ async def collector(params):
     start = min_in_millis - 60000
     uptime_in_min = (min_in_millis - params['service_start_time'])/60000
 
-    start_str = ''.join(datetime.utcfromtimestamp(min_in_millis/1000).strftime("%m/%d/%Y, %H:%M:%S"))
+    start_str = ''.join(datetime.utcfromtimestamp(min_in_millis/1000).strftime("%Y-%m-%d %H:%M:%S"))
     logging.info("Starting collection: " + start_str)
 
     await minute_collect_all(start)

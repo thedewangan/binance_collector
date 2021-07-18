@@ -69,8 +69,8 @@ def get_count(period, params):
     end = datetime.utcfromtimestamp(end_time/1000)
     start = datetime.utcfromtimestamp(start_time/1000)
     # print("Period: ", period, "\tStart: ", start, "\tEnd: ", end)
-    start_str = ''.join(start.strftime("%m/%d/%Y, %H:%M:%S"))
-    end_str = ''.join(end.strftime("%m/%d/%Y, %H:%M:%S"))
+    start_str = ''.join(start.strftime("%Y-%m-%d %H:%M:%S"))
+    end_str = ''.join(end.strftime("%Y-%m-%d %H:%M:%S"))
     logging.info("Period: " + str(period) + "\tStart: " + start_str + "\tEnd: " + end_str)
 
     cursor = params['conn'].cursor()
@@ -125,7 +125,7 @@ async def send_report(conn):
 
     body = json.dumps(data, indent=2)
 
-    report_time = datetime.utcfromtimestamp(min_in_millis/1000).strftime("%m/%d/%Y, %H:%M:%S"),
+    report_time = datetime.utcfromtimestamp(min_in_millis/1000).strftime("%Y-%m-%d %H:%M:%S"),
     report_time = ''.join(report_time)
     subject = "Binance Report UTC: " + report_time
     message = 'Subject: {}\n\n{}'.format(subject, body)
@@ -149,7 +149,7 @@ async def time_manager(conn):
     wait_time = INTERVAL_IN_SEC - rem/1000 + config['reporting_delay'] + config['initial_delay']
     await asyncio.sleep(wait_time)
     while True:
-        cur_time = datetime.utcfromtimestamp(get_cur_min()/1000).strftime("%m/%d/%Y, %H:%M:%S"),
+        cur_time = datetime.utcfromtimestamp(get_cur_min()/1000).strftime("%Y-%m-%d %H:%M:%S"),
         logging.info("Awaking reporter " + ''.join(cur_time))
         await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), send_report(conn))
 
