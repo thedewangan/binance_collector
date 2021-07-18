@@ -23,8 +23,8 @@ LIMITATIONS:
 
 -   In absence of initial delay of an hour, first report will have less percentage of data points 
     even though all possible records where made
-    [Expected value is calculated for entire interval. 
-    However, reporting service might not have started at same segment as collection period]
+    [ Expected value is calculated for entire interval
+      irrespective of whether collecting service was started before interval start or not ]
 
 -   Security issues and exception handling/logging
 
