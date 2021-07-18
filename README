@@ -2,7 +2,17 @@ BINANCE COLLECTOR
 
     Collects K line data for numerous markets every 1 min
     Processes information to get OHLCV for other periods
-    Sends reports regarding %age of data points available
+    Sends reports regarding percentage of data points available
+
+
+REPORT GENERATION:
+
+-   Expected number of data points is calculated as (REPORT_SERVICE_INTERVAL/PROCESSING_PERIODS)*NUM_MARKETS
+    Processing periods are 5 min, 15 min, 30 min and 60 min
+
+-   API is returning empty list for OHLCV for some markets.
+    In this case, expected will be more but actual number of data points will be less
+
 
 LIMITATIONS:
 
@@ -11,11 +21,16 @@ LIMITATIONS:
 
 -   Database queries are synchronous
 
--   In absence of intial delay of an hour, first report will have less %age of data points 
+-   In absence of initial delay of an hour, first report will have less percentage of data points 
     even though all possible records where made
     [Expected value is calculated for entire interval. 
     However, reporting service might not have started at same segment as collection period]
 
--   Security issues and exception handling
+-   Security issues and exception handling/logging
 
 
+NOTE:
+
+    Single process chosen rather than creating a new process periodically
+    Same object will be used to send all requests keeping check on rate limit
+    Used aysncio sleep for periodical calls. Could not find something like a scheduler
