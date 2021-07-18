@@ -8,6 +8,7 @@ import json
 import sys
 import logging
 import asyncio
+from util import *
 import setproctitle
 
 config_file = "config.test.json" if(len(sys.argv)>3 and str(sys.argv[3]) == "test") else "config.json"
@@ -18,12 +19,10 @@ with open(config_file) as json_data_file:
 logging.basicConfig(filename=config['reporter_log_file'],  level=logging.INFO)
 INTERVAL_IN_SEC = config['reporter_interval_seconds']
 
-f = open("binance_collector_info", "r")
-
 # start time in millis
+f = open("binance_collector_info", "r")
 start_time = int(f.readline()) 
-market_total_count = int(f.readline())
-         
+market_total_count = int(f.readline())   
 f.close()
 
 market_limit = min(config['market_limit'], market_total_count)
@@ -38,21 +37,6 @@ smtp_server = config['smtp_server']
 sender = config['sender_email']
 receivers = config['receiver_emails']
 
-#-------------------------------------------------------------------------------
-
-# returns latest minute since epoch in millis
-def get_cur_min():
-    s = math.floor(datetime.now(pytz.timezone('utc')).timestamp())
-    s = s - s%60
-    ms = s*1000
-    return ms
-
-#-------------------------------------------------------------------------------
-
-def get_cur_min_str():
-    cur_time = datetime.utcfromtimestamp(get_cur_min()/1000).strftime("%Y-%m-%d %H:%M:%S"),
-    return ''.join(cur_time)
-    
 #-------------------------------------------------------------------------------
 
 def get_table_name(period):

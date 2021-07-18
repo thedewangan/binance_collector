@@ -7,11 +7,11 @@ import ccxt.async_support as ccxt
 import pytz
 import mysql.connector
 from processor import data_processor, set_processor_log_config
+from util import *
 import json
 import sys
 import logging
 import setproctitle
-
 
 config_file = "config.test.json" if(len(sys.argv)>2 and str(sys.argv[2]) == "test") else "config.json"
 
@@ -32,19 +32,6 @@ exchange.timeout = config['exchange_timeout']
 
 dbcon = config['mysql']
 INTERVAL_IN_SEC = config['collector_interval_seconds']
-
-# returns latest minute since epoch in millis
-def get_cur_min():
-    s = math.floor(datetime.now(pytz.timezone('utc')).timestamp())
-    s = s - s%60
-    ms = s*1000
-    return ms
-
-#-------------------------------------------------------------------------------
-
-def get_cur_min_str():
-    cur_time = datetime.utcfromtimestamp(get_cur_min()/1000).strftime("%Y-%m-%d %H:%M:%S"),
-    return ''.join(cur_time)
 
 #-------------------------------------------------------------------------------
 
@@ -106,7 +93,7 @@ async def collector(params):
     # async support for databases ?
     conn = params['conn']
     await minute_collect_all(start, conn)
-    data_processor(5, minutes, conn)
+
     if(minutes % 5 == 0 and uptime_in_min >= 5):
         data_processor(5, minutes, conn)
     if(minutes % 15 == 0 and uptime_in_min >= 15):
