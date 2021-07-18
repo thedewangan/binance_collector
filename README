@@ -26,7 +26,7 @@ LIMITATIONS:
     [ Expected value is calculated for entire interval
       irrespective of whether collecting service was started before interval start or not ]
 
--   Security issues and exception handling/logging
+-   Security issues
 
 
 NOTE:
