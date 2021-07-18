@@ -49,6 +49,12 @@ def get_cur_min():
 
 #-------------------------------------------------------------------------------
 
+def get_cur_min_str():
+    cur_time = datetime.utcfromtimestamp(get_cur_min()/1000).strftime("%Y-%m-%d %H:%M:%S"),
+    return ''.join(cur_time)
+    
+#-------------------------------------------------------------------------------
+
 def get_table_name(period):
     return {
         5: "five_min",
@@ -68,26 +74,28 @@ def get_count(period, params):
 
     end = datetime.utcfromtimestamp(end_time/1000)
     start = datetime.utcfromtimestamp(start_time/1000)
-    # print("Period: ", period, "\tStart: ", start, "\tEnd: ", end)
+    
     start_str = ''.join(start.strftime("%Y-%m-%d %H:%M:%S"))
     end_str = ''.join(end.strftime("%Y-%m-%d %H:%M:%S"))
+
+    # print("Period: ", period, "\tStart: ", start_str, "\tEnd: ", end_str)
     logging.info("Period: " + str(period) + "\tStart: " + start_str + "\tEnd: " + end_str)
 
-    cursor = params['conn'].cursor()
+
     table_name = get_table_name(period)
     query = "SELECT COUNT(time) FROM " + table_name + " WHERE time BETWEEN %s AND %s "
     data = (start, end)
     try:
-
+        cursor = params['conn'].cursor()
         cursor.execute(query, data)
         result = cursor.fetchone()
     except:
-        return -1
+        return 0
     return result[0]
 
 #-------------------------------------------------------------------------------
 
-async def send_report(conn):
+async def send_report():
 
     min_in_millis = get_cur_min() 
     min_in_millis = min_in_millis - (min_in_millis % (config['reporting_time_divisor']*1000))
@@ -100,7 +108,10 @@ async def send_report(conn):
     periods = [5, 15, 30, 60]
     for p in periods:
         expected[p] = INTERVAL_IN_SEC/(p*60)  
-
+    
+    dbcon= config['mysql']
+    conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
+    
     params = {
         'conn': conn,
         'end_time': min_in_millis
@@ -109,6 +120,8 @@ async def send_report(conn):
     p2 = round(get_count(15, params)/(expected[15]*market_limit)*100, 2)
     p3 = round(get_count(30, params)/(expected[30]*market_limit)*100, 2)
     p4 = round(get_count(60, params)/(expected[60]*market_limit)*100, 2)
+
+    conn.close()
 
     data = {
         'Number of markets present in exchange': market_total_count,
@@ -135,7 +148,7 @@ async def send_report(conn):
         try:
             for receiver in receivers:
                 # print("Time: ", report_time, "\tSending mail to: ", receiver)
-                logging.info("Time: " + report_time + "\tSending mail to: " + receiver)
+                logging.info("Report till: " + report_time + "\tSending mail to: " + receiver)
                 server.login(sender, mail_pass)
                 server.sendmail(sender, receiver, message)
         except:
@@ -143,22 +156,23 @@ async def send_report(conn):
 
 #-------------------------------------------------------------------------------
 
-async def time_manager(conn):
+async def time_manager():
+
+    logging.info("Starting reporter " + get_cur_min_str())
+
     rem = get_cur_min() % (config['reporting_time_divisor']*1000)
-    # setting an additional delay as some processing might be happening at current time
     wait_time = INTERVAL_IN_SEC - rem/1000 + config['reporting_delay'] + config['initial_delay']
+    # set intial delay eg 60 min to ensure atleast one 60 min processor was called before reporting
+    # set reporting delay to >= 1 min to ensure processing was finished before reporting
+
     await asyncio.sleep(wait_time)
     while True:
-        cur_time = datetime.utcfromtimestamp(get_cur_min()/1000).strftime("%Y-%m-%d %H:%M:%S"),
-        logging.info("Awaking reporter " + ''.join(cur_time))
-        await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), send_report(conn))
+        logging.info("Awaking reporter " + get_cur_min_str())
+        await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), send_report())
 
 #-------------------------------------------------------------------------------
 
-dbcon= config['mysql']
-conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
-
 loop = asyncio.get_event_loop()
-loop.run_until_complete(time_manager(conn))
-conn.close()
+loop.run_until_complete(time_manager())
+
 

@@ -28,10 +28,7 @@ exchange.enableRateLimit = True
 exchange.rateLimit = config['exchange_ratelimit']
 exchange.timeout = config['exchange_timeout']
 
-dbcon= config['mysql']
-conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
-cursor = conn.cursor()
-
+dbcon = config['mysql']
 INTERVAL_IN_SEC = config['collector_interval_seconds']
 
 # returns latest minute since epoch in millis
@@ -43,8 +40,15 @@ def get_cur_min():
 
 #-------------------------------------------------------------------------------
 
-async def minute_collect_market(symbol, start):
+def get_cur_min_str():
+    cur_time = datetime.utcfromtimestamp(get_cur_min()/1000).strftime("%Y-%m-%d %H:%M:%S"),
+    return ''.join(cur_time)
+
+#-------------------------------------------------------------------------------
+
+async def minute_collect_market(symbol, start, conn):
     try:
+        cursor = conn.cursor()
         ans = await exchange.fetchOHLCV(symbol, timeframe='1m', since=start, limit=1)
         if(len(ans) and len(ans[0])==6):
             t = ans[0][0]
@@ -65,11 +69,11 @@ async def minute_collect_market(symbol, start):
 
 #-------------------------------------------------------------------------------
 
-async def minute_collect_all(start):
+async def minute_collect_all(start, conn):
     tasks = []
     market_limit = config['market_limit']
     for symbol in exchange.symbols[:market_limit]:
-        tasks.append(minute_collect_market(symbol, start))
+        tasks.append(minute_collect_market(symbol, start, conn))
     await asyncio.gather(*tasks)
 
 #-------------------------------------------------------------------------------
@@ -84,40 +88,52 @@ async def collector(params):
             f = open("binance_collector_info","w+")
             f.write(str(min_in_millis))                 # minute of first request / service start time
             f.write("\n"+str(len(exchange.symbols)))    # number of markets present in exchange
-            # actual number of markets was greater than reuqest limit per second !?
             f.close()
+            # actual number of markets was greater than request limit per second !?
+            logging.info("Markets loaded")
         
     start = min_in_millis - 60000
     uptime_in_min = (min_in_millis - params['service_start_time'])/60000
+    time_str = ''.join(datetime.utcfromtimestamp(min_in_millis/1000).strftime("%Y-%m-%d %H:%M:%S"))
+    logging.info("Starting collection: " + time_str)
 
-    start_str = ''.join(datetime.utcfromtimestamp(min_in_millis/1000).strftime("%Y-%m-%d %H:%M:%S"))
-    logging.info("Starting collection: " + start_str)
-
-    await minute_collect_all(start)
-    minutes = min_in_millis/60000
     # async support for databases ?
+    conn = params['conn']
+    await minute_collect_all(start, conn)
+
+    minutes = min_in_millis/60000
+
     if(minutes % 5 == 0 and uptime_in_min >= 5):
         logging.info("Calling 5 min processor")
         data_processor(5, minutes, conn)
+
     if(minutes % 15 == 0 and uptime_in_min >= 15):
         logging.info("Calling 15 min processor")
         data_processor(15, minutes, conn)
+
     if(minutes % 30 == 0 and uptime_in_min >= 30):
         logging.info("Calling 30 min processor")
         data_processor(30, minutes, conn)
+
     if(minutes % 60 == 0 and uptime_in_min >= 60):
         logging.info("Calling 60 min processor")
         data_processor(60, minutes, conn)
-    
+
+    if(minutes % 5 == 0 and uptime_in_min >= 5):
+        logging.info("All processing finished " + get_cur_min_str())
+
 #-------------------------------------------------------------------------------
+
 async def time_manager(params):
     while True:
+        conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
+        params['conn'] = conn
         # note that if collector takes more time than interval wait would be more
         # so ensure that collector does work before interval
-        await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), collector(params))
         # could not find something like setinterval
         # other options were maintaining end to start interval rather than start to start
-
+        await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), collector(params))
+        conn.close()
 
 #-------------------------------------------------------------------------------
 

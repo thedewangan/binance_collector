@@ -27,29 +27,30 @@ def get_table_name(period):
 def data_processor(period, cur_min, conn):
     # print("DATA PROCESSOR: ", period, " min\n")
     (in_table, out_table) = get_table_name(period)
-    cursor = conn.cursor()
-
+    
     start = datetime.utcfromtimestamp((cur_min-period)*60)
     end = datetime.utcfromtimestamp((cur_min-1)*60)
 
     query = "SELECT * FROM " + in_table + " WHERE time BETWEEN %s AND %s order by time"
     data = (start, end)
     try:
+        cursor = conn.cursor()
         cursor.execute(query, data)
+        result = cursor.fetchall()
+        d = {}
+        process(result, d)
+        query = "INSERT INTO " + out_table + " VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        for market, row in d.items():
+            # bug fix: do not take non border values as open time 
+            # happens in case of missing border values in input tables
+            row[0] = min(row[0], start)
+            try:
+                cursor.execute(query, tuple(row))
+                conn.commit()
+            except:
+                conn.rollback()
     except:
         return
-    result = cursor.fetchall()
-    d = {}
-    process(result, d)
-    query = "INSERT INTO " + out_table + " VALUES (%s, %s, %s, %s, %s, %s, %s)"
-    for market, row in d.items():
-        # bug fix: do not take non border values as open time 
-        # happens in case of missing border values in input tables
-        row[0] = min(row[0], start)
-        try:
-            cursor.execute(query, tuple(row))
-            conn.commit()
-        except:
-            conn.rollback()
+
 
 
