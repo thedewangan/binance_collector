@@ -1,4 +1,10 @@
 from datetime import datetime
+import logging
+
+def set_processor_log_config(name):
+    logging.basicConfig(filename=name,  level=logging.INFO)
+
+#-------------------------------------------------------------------------------
 
 def process(query_result, md):
     #inp is query result while md is a dict
@@ -25,9 +31,9 @@ def get_table_name(period):
 #-------------------------------------------------------------------------------
 
 def data_processor(period, cur_min, conn):
-    # print("DATA PROCESSOR: ", period, " min\n")
+    logging.info("DATA PROCESSOR: " + str(period) + " min")
+
     (in_table, out_table) = get_table_name(period)
-    
     start = datetime.utcfromtimestamp((cur_min-period)*60)
     end = datetime.utcfromtimestamp((cur_min-1)*60)
 
@@ -47,10 +53,13 @@ def data_processor(period, cur_min, conn):
             try:
                 cursor.execute(query, tuple(row))
                 conn.commit()
-            except:
+            except Exception as e:
                 conn.rollback()
-    except:
-        return
+                logging.error("Processor " + str(period) + " min\t{}".format(type(e).__name__))
+                logging.error("Processor " + str(period) + " min\t{}".format(e))
+    except Exception as e:
+        logging.error("Processor " + str(period) + " min\t{}".format(type(e).__name__))
+        logging.error("Processor " + str(period) + " min\t{}".format(e))
 
 
 

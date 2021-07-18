@@ -66,8 +66,8 @@ def get_table_name(period):
 #-------------------------------------------------------------------------------
 
 def get_count(period, params):
-    end_time = params['end_time']
 
+    end_time = params['end_time']
     start_time = end_time - INTERVAL_IN_SEC*1000
     end_time -= 60*1000
     # subtracting 1 min from end since SQL between is inclusive and we want exlusive
@@ -81,7 +81,6 @@ def get_count(period, params):
     # print("Period: ", period, "\tStart: ", start_str, "\tEnd: ", end_str)
     logging.info("Period: " + str(period) + "\tStart: " + start_str + "\tEnd: " + end_str)
 
-
     table_name = get_table_name(period)
     query = "SELECT COUNT(time) FROM " + table_name + " WHERE time BETWEEN %s AND %s "
     data = (start, end)
@@ -89,7 +88,9 @@ def get_count(period, params):
         cursor = params['conn'].cursor()
         cursor.execute(query, data)
         result = cursor.fetchone()
-    except:
+    except Exception as e:
+        logging.error("Reporter {}".format(type(e).__name__))
+        logging.error("Reporter {}".format(e))
         return 0
     return result[0]
 
@@ -111,7 +112,6 @@ async def send_report():
     
     dbcon= config['mysql']
     conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
-    
     params = {
         'conn': conn,
         'end_time': min_in_millis
@@ -120,7 +120,6 @@ async def send_report():
     p2 = round(get_count(15, params)/(expected[15]*market_limit)*100, 2)
     p3 = round(get_count(30, params)/(expected[30]*market_limit)*100, 2)
     p4 = round(get_count(60, params)/(expected[60]*market_limit)*100, 2)
-
     conn.close()
 
     data = {
@@ -136,28 +135,27 @@ async def send_report():
         'Percentage of data points available for 1 hour': p4
     }
 
-    body = json.dumps(data, indent=2)
-
     report_time = datetime.utcfromtimestamp(min_in_millis/1000).strftime("%Y-%m-%d %H:%M:%S"),
     report_time = ''.join(report_time)
     subject = "Binance Report UTC: " + report_time
+    body = json.dumps(data, indent=2)
     message = 'Subject: {}\n\n{}'.format(subject, body)
 
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-        try:
-            for receiver in receivers:
-                # print("Time: ", report_time, "\tSending mail to: ", receiver)
-                logging.info("Report till: " + report_time + "\tSending mail to: " + receiver)
+        for receiver in receivers:
+            # print("Time: ", report_time, "\tSending mail to: ", receiver)
+            logging.info("Report till: " + report_time + "\tSending mail to: " + receiver)
+            try:
                 server.login(sender, mail_pass)
                 server.sendmail(sender, receiver, message)
-        except:
-            return
+            except Exception as e:
+                logging.error("Reporter {}".format(type(e).__name__))
+                logging.error("Reporter {}".format(e))
 
 #-------------------------------------------------------------------------------
 
 async def time_manager():
-
     logging.info("Starting reporter " + get_cur_min_str())
 
     rem = get_cur_min() % (config['reporting_time_divisor']*1000)

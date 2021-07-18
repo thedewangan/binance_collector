@@ -6,7 +6,7 @@ import asyncio
 import ccxt.async_support as ccxt
 import pytz
 import mysql.connector
-from processor import data_processor
+from processor import data_processor, set_processor_log_config
 import json
 import sys
 import logging
@@ -19,6 +19,8 @@ with open(config_file) as json_data_file:
     config = json.load(json_data_file)
 
 logging.basicConfig(filename=config['collector_log_file'],  level=logging.INFO)
+set_processor_log_config(config['collector_log_file'])
+
 # to change password getting mechanism
 db_pass = str(sys.argv[1])
 setproctitle.setproctitle("collector.py")
@@ -59,13 +61,16 @@ async def minute_collect_market(symbol, start, conn):
             try:
                 cursor.execute(query, data)
                 conn.commit()
-            except:
+            except Exception as e:
                 conn.rollback()
+                logging.error("Collector\t" + symbol + "\t{}".format(type(e).__name__))
+                logging.error("Collector\t" + symbol + "\t{}".format(e))
         # print(symbol, end = " ")
         # pprint(ans)
         # print()
-    except:
-        return
+    except Exception as e:
+        logging.error("Collector\t" + symbol + "\t{}".format(type(e).__name__))
+        logging.error("Collector\t" + symbol + "\t{}".format(e))
 
 #-------------------------------------------------------------------------------
 
@@ -94,31 +99,22 @@ async def collector(params):
         
     start = min_in_millis - 60000
     uptime_in_min = (min_in_millis - params['service_start_time'])/60000
+    minutes = min_in_millis/60000
     time_str = ''.join(datetime.utcfromtimestamp(min_in_millis/1000).strftime("%Y-%m-%d %H:%M:%S"))
     logging.info("Starting collection: " + time_str)
 
     # async support for databases ?
     conn = params['conn']
     await minute_collect_all(start, conn)
-
-    minutes = min_in_millis/60000
-
+    data_processor(5, minutes, conn)
     if(minutes % 5 == 0 and uptime_in_min >= 5):
-        logging.info("Calling 5 min processor")
         data_processor(5, minutes, conn)
-
     if(minutes % 15 == 0 and uptime_in_min >= 15):
-        logging.info("Calling 15 min processor")
         data_processor(15, minutes, conn)
-
     if(minutes % 30 == 0 and uptime_in_min >= 30):
-        logging.info("Calling 30 min processor")
         data_processor(30, minutes, conn)
-
     if(minutes % 60 == 0 and uptime_in_min >= 60):
-        logging.info("Calling 60 min processor")
         data_processor(60, minutes, conn)
-
     if(minutes % 5 == 0 and uptime_in_min >= 5):
         logging.info("All processing finished " + get_cur_min_str())
 
