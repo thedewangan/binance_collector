@@ -115,6 +115,8 @@ async def time_manager(params):
         # note that if collector takes more time than interval wait would be more
         # so ensure that collector does work before interval
         await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), collector(params))
+        # could not find something like setinterval
+        # other options were maintaining end to start interval rather than start to start
 
 
 #-------------------------------------------------------------------------------
