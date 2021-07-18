@@ -21,12 +21,12 @@ def get_cur_min_str():
 
 def create_connection(dbcon, db_pass):
     retry_count = 0
-    while retry_count < 5:
+    while True:
         try:
             conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
             return conn
         except Exception as e:
             retry_count += 1
-            if(retry_count == 5):
+            if(retry_count == dbcon['max_retry']):
                 raise e
-            time.sleep(1)
+            time.sleep(dbcon['wait'])

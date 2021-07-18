@@ -1,8 +1,6 @@
 import smtplib, ssl
-import math
 from datetime import datetime
 from time import strftime
-import pytz
 import mysql.connector
 import json
 import sys
@@ -95,7 +93,13 @@ async def send_report():
         expected[p] = INTERVAL_IN_SEC/(p*60)  
     
     dbcon= config['mysql']
-    conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
+    try:
+        conn = create_connection(dbcon, db_pass)
+    except Exception as e:
+        logging.error("Collector" + "\t{}".format(type(e).__name__))
+        logging.error("Collector" + "\t{}".format(e))
+        return
+
     params = {
         'conn': conn,
         'end_time': min_in_millis

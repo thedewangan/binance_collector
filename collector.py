@@ -1,11 +1,8 @@
 import ccxt
 from datetime import datetime
-import math
 from pprint import pprint
 import asyncio
 import ccxt.async_support as ccxt
-import pytz
-import mysql.connector
 from processor import data_processor, set_processor_log_config
 from util import *
 import json
@@ -90,8 +87,14 @@ async def collector(params):
     time_str = ''.join(datetime.utcfromtimestamp(min_in_millis/1000).strftime("%Y-%m-%d %H:%M:%S"))
     logging.info("Starting collection: " + time_str)
 
+    try:
+        conn = create_connection(dbcon, db_pass)
+    except Exception as e:
+        logging.error("Collector" + "\t{}".format(type(e).__name__))
+        logging.error("Collector" + "\t{}".format(e))
+        return
+
     # async support for databases ?
-    conn = params['conn']
     await minute_collect_all(start, conn)
 
     if(minutes % 5 == 0 and uptime_in_min >= 5):
@@ -104,20 +107,16 @@ async def collector(params):
         data_processor(60, minutes, conn)
     if(minutes % 5 == 0 and uptime_in_min >= 5):
         logging.info("All processing finished " + get_cur_min_str())
-
+    conn.close()
 #-------------------------------------------------------------------------------
 
 async def time_manager(params):
     while True:
-        conn = mysql.connector.connect(user=dbcon['user'], password=db_pass, host=dbcon['host'], database=dbcon['database'])
-        params['conn'] = conn
-        # note that if collector takes more time than interval wait would be more
-        # so ensure that collector does work before interval
-        # could not find something like setinterval
-        # other options were maintaining end to start interval rather than start to start
-        await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), collector(params))
-        conn.close()
-
+            await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), collector(params))
+            # note that if collector takes more time than interval, actual wait would be more
+            # so ensure that collector does work before interval
+            # could not find something like setinterval
+            # other options were maintaining end to start interval rather than start to start
 #-------------------------------------------------------------------------------
 
 params = {'running': False}  
