@@ -2,7 +2,9 @@
     "mysql": {
         "host": "127.0.0.1",
         "user": "root",
-        "database": "binance"
+        "database": "binance",
+        "max_retry": 5,
+        "wait": 1
     },
 
     "collector_interval_seconds": 60,
