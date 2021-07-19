@@ -2,17 +2,14 @@ import mysql.connector
 import json
 import getpass
 import sys
-import setproctitle
 
-config_file = "config.test.json" if(len(sys.argv)>2 and str(sys.argv[2]) == "test") else "config.json"
+config_file = "config.test.json" if(len(sys.argv)>1 and str(sys.argv[1]) == "test") else "config.json"
 
 with open(config_file) as json_data_file:
     config = json.load(json_data_file)
 
 dbcon= config['mysql']
-# to change password getting mechanism
-db_pass = str(sys.argv[1])
-setproctitle.setproctitle("db.py")
+db_pass = getpass.getpass("Enter mysql password: ")
 
 conn = mysql.connector.connect(user=dbcon['user'],  password=db_pass, host=dbcon['host'], database=dbcon['database'])
 cursor = conn.cursor()

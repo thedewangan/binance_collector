@@ -1,15 +1,15 @@
+import re
 import smtplib, ssl
 from datetime import datetime
 from time import strftime
-import mysql.connector
 import json
 import sys
 import logging
 import asyncio
 from util import *
-import setproctitle
+import getpass
 
-config_file = "config.test.json" if(len(sys.argv)>3 and str(sys.argv[3]) == "test") else "config.json"
+config_file = "config.test.json" if(len(sys.argv)>1 and str(sys.argv[1]) == "test") else "config.json"
 
 with open(config_file) as json_data_file:
     config = json.load(json_data_file)
@@ -26,10 +26,9 @@ f.close()
 market_limit = min(config['market_limit'], market_total_count)
 port = config['port']
 
-# to change password getting mechanism
-db_pass = str(sys.argv[1])
-mail_pass = str(sys.argv[2])
-setproctitle.setproctitle("reporter.py")
+dbcon= config['mysql']
+db_pass = getpass.getpass("Enter mysql password: ")
+mail_pass =  getpass.getpass("Enter e-mail password: ")
 
 smtp_server = config['smtp_server']
 sender = config['sender_email']
@@ -78,6 +77,20 @@ def get_count(period, params):
 
 #-------------------------------------------------------------------------------
 
+def send_mails(receivers, message):
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+        for receiver in receivers:
+            logging.info("Sending mail to: " + receiver)
+            try:
+                server.login(sender, mail_pass)
+                server.sendmail(sender, receiver, message)
+            except Exception as e:
+                logging.error("Reporter {}".format(type(e).__name__))
+                logging.error("Reporter {}".format(e))
+
+#-------------------------------------------------------------------------------
+
 async def send_report():
 
     min_in_millis = get_cur_min() 
@@ -92,7 +105,6 @@ async def send_report():
     for p in periods:
         expected[p] = INTERVAL_IN_SEC/(p*60)  
     
-    dbcon= config['mysql']
     try:
         conn = create_connection(dbcon, db_pass)
     except Exception as e:
@@ -129,22 +141,16 @@ async def send_report():
     body = json.dumps(data, indent=2)
     message = 'Subject: {}\n\n{}'.format(subject, body)
 
-    context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-        for receiver in receivers:
-            # print("Time: ", report_time, "\tSending mail to: ", receiver)
-            logging.info("Report till: " + report_time + "\tSending mail to: " + receiver)
-            try:
-                server.login(sender, mail_pass)
-                server.sendmail(sender, receiver, message)
-            except Exception as e:
-                logging.error("Reporter {}".format(type(e).__name__))
-                logging.error("Reporter {}".format(e))
+    logging.info("Report till: " + report_time)
+    try:
+        send_mails(receivers, message)
+    except Exception as e:
+        logging.error("Reporter {}".format(type(e).__name__))
+        logging.error("Reporter {}".format(e))
 
 #-------------------------------------------------------------------------------
 
 async def time_manager():
-    logging.info("Starting reporter " + get_cur_min_str())
 
     rem = get_cur_min() % (config['reporting_time_divisor']*1000)
     wait_time = INTERVAL_IN_SEC - rem/1000 + config['reporting_delay'] + config['initial_delay']
@@ -157,6 +163,14 @@ async def time_manager():
         await asyncio.gather(asyncio.sleep(INTERVAL_IN_SEC), send_report())
 
 #-------------------------------------------------------------------------------
+
+logging.info("Starting reporter " + get_cur_min_str())
+try:
+    conn = create_connection(dbcon, db_pass)
+    send_mails(receivers[:1], "Starting Reporter")
+except Exception as e:
+    logging.error("Reporter {}".format(type(e).__name__))
+    logging.error("Reporter {}".format(e))
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(time_manager())

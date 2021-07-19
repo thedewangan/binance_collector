@@ -8,9 +8,9 @@ from util import *
 import json
 import sys
 import logging
-import setproctitle
+import getpass
 
-config_file = "config.test.json" if(len(sys.argv)>2 and str(sys.argv[2]) == "test") else "config.json"
+config_file = "config.test.json" if(len(sys.argv)>1 and str(sys.argv[1]) == "test") else "config.json"
 
 with open(config_file) as json_data_file:
     config = json.load(json_data_file)
@@ -18,16 +18,13 @@ with open(config_file) as json_data_file:
 logging.basicConfig(filename=config['collector_log_file'],  level=logging.INFO)
 set_processor_log_config(config['collector_log_file'])
 
-# to change password getting mechanism
-db_pass = str(sys.argv[1])
-setproctitle.setproctitle("collector.py")
-
 exchange = ccxt.binance()
 exchange.enableRateLimit = True
 exchange.rateLimit = config['exchange_ratelimit']
 exchange.timeout = config['exchange_timeout']
 
 dbcon = config['mysql']
+db_pass = getpass.getpass("Enter mysql password: ")
 INTERVAL_IN_SEC = config['collector_interval_seconds']
 
 #-------------------------------------------------------------------------------
