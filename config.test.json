@@ -13,10 +13,10 @@
     "market_limit": 100,
     "collector_log_file": "collection_log",
 
-    "reporter_interval_seconds": 3600,
-    "reporting_time_divisor": 3600,
-    "reporting_delay": 300,
-    "initial_delay": 3600,
+    "reporter_interval_seconds": 300,
+    "reporting_time_divisor": 300,
+    "reporting_delay": 60,
+    "initial_delay": 300,
     "reporter_log_file": "report_log",
     
     "port": 465,
