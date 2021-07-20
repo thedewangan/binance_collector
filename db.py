@@ -28,7 +28,8 @@ sql ='''CREATE TABLE one_min(
    high DOUBLE,
    low DOUBLE,
    close DOUBLE,
-   volume DOUBLE
+   volume DOUBLE,
+   PRIMARY KEY (time, market)
 )'''
 cursor.execute(sql)
 
